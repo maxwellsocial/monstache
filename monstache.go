@@ -1168,7 +1168,11 @@ func buildSelector(matchField string, data interface{}) bson.M {
 	flen := len(fields)
 	for i, field := range fields {
 		if i+1 == flen {
-			cur[field] = data
+			if reflect.TypeOf(data).Kind() == reflect.Slice {
+				cur[field] = bson.M{"$in": data}
+			} else {
+				cur[field] = data
+			}
 		} else {
 			next := bson.M{}
 			cur[field] = next

@@ -199,6 +199,86 @@ func TestBuildRelateSelector(t *testing.T) {
 		t.Fatalf("Expected matching foo.bar to 1: %v", sel)
 	}
 }
+func TestBuildSelectorWithArray(t *testing.T) {
+	// Test case 1: data is an array of ObjectIDs
+	objectID1 := primitive.NewObjectID()
+	objectID2 := primitive.NewObjectID()
+	dataArray := []primitive.ObjectID{objectID1, objectID2}
+	selArray := buildSelector("foo.bar", dataArray)
+	if selArray == nil {
+		t.Fatalf("Expected non-nil selector for array data")
+	}
+	if len(selArray) != 1 {
+		t.Fatalf("Expected 1 foo key in selector for array data")
+	}
+	fooFieldArray, okFoo := selArray["foo"].(bson.M)
+	if !okFoo {
+		t.Fatalf("Expected nested selector under foo for array data")
+	}
+	barFieldArray, okBar := fooFieldArray["bar"].(bson.M)
+	if !okBar {
+		t.Fatalf("Expected nested selector under bar for array data")
+	}
+	inDataArray, okIn := barFieldArray["$in"].([]primitive.ObjectID)
+	if !okIn {
+		t.Fatalf("Expected $in operator for array data")
+	}
+	if len(inDataArray) != 2 || inDataArray[0] != objectID1 || inDataArray[1] != objectID2 {
+		t.Fatalf("Expected $in operator to contain the correct ObjectIDs: %v", selArray)
+	}
+
+	// Test case 2: data is a single ObjectID
+	singleObjectID := primitive.NewObjectID()
+	selSingle := buildSelector("foo.bar", singleObjectID)
+	if selSingle == nil {
+		t.Fatalf("Expected non-nil selector for single ObjectID")
+	}
+	if len(selSingle) != 1 {
+		t.Fatalf("Expected 1 foo key in selector for single ObjectID")
+	}
+	fooFieldSingle, okFooSingle := selSingle["foo"].(bson.M)
+	if !okFooSingle {
+		t.Fatalf("Expected nested selector under foo for single ObjectID")
+	}
+	barFieldSingle, okBarSingle := fooFieldSingle["bar"].(primitive.ObjectID)
+	if !okBarSingle || barFieldSingle != singleObjectID {
+		t.Fatalf("Expected matching foo.bar to single ObjectID: %v", selSingle)
+	}
+
+	// Test case 3: data is a string
+	dataString := "test_string"
+	selString := buildSelector("foo", dataString)
+	if selString == nil {
+		t.Fatalf("Expected non-nil selector for string data")
+	}
+	if len(selString) != 1 {
+		t.Fatalf("Expected 1 foo key in selector for string data")
+	}
+	if selString["foo"] != dataString {
+		t.Fatalf("Expected matching foo to string: %v", selString)
+	}
+
+	// Test case 4: data is an array of strings
+	dataStringArray := []string{"str1", "str2"}
+	selStringArray := buildSelector("baz", dataStringArray)
+	if selStringArray == nil {
+		t.Fatalf("Expected non-nil selector for string array data")
+	}
+	if len(selStringArray) != 1 {
+		t.Fatalf("Expected 1 baz key in selector for string array data")
+	}
+	bazField, okBaz := selStringArray["baz"].(bson.M)
+	if !okBaz {
+		t.Fatalf("Expected nested selector under baz for string array data")
+	}
+	inDataStringArray, okInString := bazField["$in"].([]string)
+	if !okInString {
+		t.Fatalf("Expected $in operator for string array data")
+	}
+	if len(inDataStringArray) != 2 || inDataStringArray[0] != "str1" || inDataStringArray[1] != "str2" {
+		t.Fatalf("Expected $in operator to contain the correct strings: %v", selStringArray)
+	}
+}
 
 func TestMatchFieldTypeRelatedData(t *testing.T) {
 	var err error
